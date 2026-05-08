@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐸 Frog Mystery Box Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark: #2d6a1f;
+    --green-mid: #4a8a30;
+    --green-light: #7bc547;
+    --green-pale: #e8f5e1;
+    --green-box: #5aaa28;
+    --gold: #f0a500;
+    --gold-dark: #c47d00;
+    --gold-light: #ffd54f;
+    --gold-ribbon: #e8920a;
+  }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--green-pale);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(123,197,71,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 75%, rgba(90,170,40,0.15) 0%, transparent 55%),
+      repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(144,200,104,0.06) 40px, rgba(144,200,104,0.06) 80px);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .game-wrap {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(8px, 2vw, 20px) clamp(10px, 2.5vw, 28px);
+    gap: clamp(8px, 1.5vw, 16px);
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .title {
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(1.8rem, 5vw, 3.6rem);
+    font-weight: 800;
+    color: var(--green-dark);
+    text-shadow: 3px 3px 0px rgba(255,255,255,0.7), 1px 1px 0 rgba(90,170,40,0.3);
+    line-height: 1.1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.2vw, 14px);
+    flex-wrap: wrap;
+  }
+
+  .frog { display: inline-block; animation: bounce 1.8s ease-in-out infinite; }
+  .frog:nth-child(3) { animation-delay: 0.5s; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+  .subtitle {
+    font-size: clamp(0.85rem, 1.8vw, 1.15rem);
+    color: var(--green-mid);
+    font-weight: 800;
+    margin-top: 4px;
+  }
+
+  /* ── Box Grid ── */
+  .boxes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(clamp(90px, 12vw, 150px), 1fr));
+    gap: clamp(10px, 1.8vw, 22px);
+    width: 100%;
+  }
+
+  /* ── Gift Box ── */
+  .box-card {
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    transition: transform 0.18s cubic-bezier(.34,1.56,.64,1);
+    user-select: none;
+    aspect-ratio: 1 / 1.15;
+  }
+
+  .box-card:hover:not(.picked) { transform: translateY(-6px) scale(1.04); }
+  .box-card:active:not(.picked) { transform: translateY(1px) scale(0.97); }
+  .box-card.picked { opacity: 0.7; cursor: default; filter: grayscale(0.3); }
+
+  /* SVG gift box inside each card */
+  .gift-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .box-label {
+    position: absolute;
+    bottom: clamp(6px, 1.2vw, 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(0.75rem, 1.6vw, 1.1rem);
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 1px 2px 0 rgba(0,0,0,0.3);
+    white-space: nowrap;
+  }
+
+  .check-badge {
+    position: absolute;
+    top: clamp(2px, 0.5vw, 6px);
+    right: clamp(2px, 0.5vw, 6px);
+    font-size: clamp(1.1rem, 2.5vw, 1.8rem);
+    line-height: 1;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+  }
+
+  /* ── Voting Bar ── */
+  .voting-section {
+    flex-shrink: 0;
+  }
+
+  .vote-row {
+    display: flex;
+    gap: clamp(8px, 1.5vw, 16px);
+    flex-wrap: nowrap;
+  }
+
+  .vote-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.85);
+    border: clamp(3px, 0.5vw, 5px) solid var(--green-light);
+    border-radius: clamp(12px, 2.5vw, 22px);
+    padding: clamp(8px, 1.5vw, 16px) clamp(10px, 2vw, 20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1vw, 12px);
+  }
+
+  .vote-emoji { font-size: clamp(1.6rem, 4vw, 3rem); line-height: 1; }
+  .vote-label {
+    font-size: clamp(0.9rem, 2.2vw, 1.5rem);
+    font-weight: 900;
+    color: var(--green-dark);
+    line-height: 1.2;
+  }
+
+  .try-again-bar {
+    background: linear-gradient(135deg, #fff9e6, #fff0c2);
+    border: clamp(3px, 0.5vw, 5px) solid var(--gold);
+    border-radius: clamp(12px, 2.5vw, 22px);
+    padding: clamp(8px, 1.5vw, 14px) clamp(14px, 3vw, 28px);
+    text-align: center;
+    font-size: clamp(0.95rem, 2.2vw, 1.45rem);
+    font-weight: 900;
+    color: #7a5000;
+    margin-top: clamp(8px, 1.2vw, 14px);
+  }
+
+  /* ── Shuffle button ── */
+  .controls-bar {
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .btn-shuffle {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: clamp(0.9rem, 2vw, 1.3rem);
+    background: linear-gradient(135deg, #ff9f43, #e07000);
+    color: #fff;
+    border: none;
+    border-radius: clamp(14px, 3vw, 28px);
+    padding: clamp(10px, 1.8vw, 16px) clamp(24px, 5vw, 52px);
+    cursor: pointer;
+    box-shadow: 0 5px 0 #a54f00;
+    transition: transform 0.12s, box-shadow 0.12s;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+  }
+  .btn-shuffle:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #a54f00; }
+  .btn-shuffle:active { transform: translateY(3px); box-shadow: 0 2px 0 #a54f00; }
+
+  /* ── Popup Overlay ── */
+  .popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,60,5,0.6);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(8px, 2vw, 24px);
+    backdrop-filter: blur(4px);
+    overflow-y: auto;
+  }
+  .popup-overlay.active { display: flex; }
+
+  .popup-box {
+    background: linear-gradient(150deg, #f2fbe8, #dff5c5);
+    border: clamp(4px, 0.6vw, 7px) solid var(--green-box);
+    border-radius: clamp(16px, 3vw, 32px);
+    padding: clamp(12px, 2.5vw, 32px) clamp(14px, 3vw, 40px);
+    max-width: min(860px, 98vw);
+    width: 100%;
+    margin: auto;
+    position: relative;
+    animation: popIn 0.38s cubic-bezier(.36,.07,.19,.97) both;
+    box-shadow: 0 clamp(8px, 1.5vw, 20px) clamp(20px, 4vw, 55px) rgba(0,0,0,0.28);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.5vw, 16px);
+  }
+
+  @keyframes popIn {
+    0%{ transform: scale(0.65) translateY(40px); opacity: 0; }
+    65%{ transform: scale(1.05); }
+    100%{ transform: scale(1); opacity: 1; }
+  }
+
+  .popup-frog-row {
+    text-align: center;
+    font-size: clamp(1.8rem, 5vw, 3.8rem);
+    line-height: 1;
+    animation: bounce 1.8s ease-in-out infinite;
+  }
+
+  .popup-word-chip {
+    text-align: center;
+    font-family: 'Baloo 2', cursive;
+    font-size: clamp(1.6rem, 5vw, 3.8rem);
+    font-weight: 800;
+    color: var(--green-dark);
+    background: var(--gold-light);
+    border-radius: clamp(10px, 2vw, 20px);
+    padding: clamp(4px, 0.8vw, 10px) clamp(16px, 3vw, 36px);
+  }
+
+  .popup-frames {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 1.5vw, 16px);
+  }
+
+  .frame-card {
+    background: #fff;
+    border: clamp(2px, 0.4vw, 4px) solid var(--green-light);
+    border-radius: clamp(12px, 2.5vw, 22px);
+    padding: clamp(10px, 2vw, 20px) clamp(14px, 3vw, 28px);
+  }
+
+  .frame-card-text {
+    font-size: clamp(1.05rem, 3vw, 2rem);
+    font-weight: 800;
+    color: var(--green-dark);
+    line-height: 1.4;
+  }
+
+  .frame-blank {
+    display: inline-block;
+    color: #c47d00;
+    font-weight: 900;
+    letter-spacing: 2px;
+    border-bottom: clamp(2px, 0.4vw, 4px) solid #e8920a;
+    padding: 0 4px;
+    min-width: clamp(40px, 6vw, 80px);
+    text-align: center;
+  }
+
+  .frame-fill {
+    display: inline-block;
+    background: var(--gold-light);
+    color: #5d3a00;
+    border-radius: 8px;
+    padding: 1px 10px;
+    font-weight: 900;
+  }
+
+  /* ── Voting inside popup ── */
+  .popup-voting {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 1.2vw, 12px);
+  }
+
+  .popup-vote-row {
+    display: flex;
+    gap: clamp(8px, 1.5vw, 14px);
+  }
+
+  .popup-vote-card {
+    flex: 1;
+    background: rgba(232,245,225,0.9);
+    border: clamp(2px, 0.4vw, 4px) solid var(--green-light);
+    border-radius: clamp(10px, 2vw, 18px);
+    padding: clamp(8px, 1.5vw, 14px) clamp(10px, 2vw, 18px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1vw, 10px);
+  }
+
+  .popup-vote-emoji { font-size: clamp(1.4rem, 3.5vw, 2.6rem); }
+  .popup-vote-label {
+    font-size: clamp(0.85rem, 2vw, 1.3rem);
+    font-weight: 900;
+    color: var(--green-dark);
+    line-height: 1.2;
+  }
+
+  .popup-try-again {
+    background: linear-gradient(135deg, #fff9e6, #fff0c2);
+    border: clamp(2px, 0.4vw, 4px) solid var(--gold);
+    border-radius: clamp(10px, 2vw, 18px);
+    padding: clamp(8px, 1.5vw, 14px) clamp(14px, 3vw, 24px);
+    text-align: center;
+    font-size: clamp(0.9rem, 2vw, 1.3rem);
+    font-weight: 900;
+    color: #7a5000;
+  }
+
+  /* ── Close button ── */
+  .popup-close-btn {
+    font-family: 'Nunito', sans-serif;
+    font-weight: 900;
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    background: linear-gradient(135deg, var(--green-light), var(--green-box));
+    color: #fff;
+    border: none;
+    border-radius: clamp(14px, 3vw, 28px);
+    padding: clamp(10px, 2vw, 18px) clamp(30px, 6vw, 60px);
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 5px 0 #3a7018;
+    transition: transform 0.12s, box-shadow 0.12s;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
+  }
+  .popup-close-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #3a7018; }
+  .popup-close-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #3a7018; }
+</style>
+</head>
+<body>
+
+<div class="game-wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="title">
+      <span class="frog">🐸</span>
+      Mystery Box Game
+      <span class="frog">🐸</span>
+    </div>
+    <div class="subtitle">🎤 Pick a box and speak out loud!</div>
+  </div>
+
+  <!-- Box Grid -->
+  <div class="boxes-grid" id="boxGrid"></div>
+
+  <!-- Shuffle button -->
+  <div class="controls-bar">
+    <button class="btn-shuffle" onclick="shuffleBoxes()">🔀 Shuffle Boxes &amp; New Round</button>
+  </div>
+
+</div>
+
+<!-- Popup Overlay -->
+<div class="popup-overlay" id="popup">
+  <div class="popup-box" id="popupBox">
+    <div class="popup-frog-row">🐸</div>
+    <div class="popup-word-chip" id="popupWord"></div>
+    <div class="popup-frames" id="popupFrames"></div>
+    <!-- voting guide inside popup -->
+    <div class="popup-voting">
+      <div class="popup-vote-row">
+        <div class="popup-vote-card">
+          <span class="popup-vote-emoji">👍</span>
+          <span class="popup-vote-label">Loud enough!</span>
+        </div>
+        <div class="popup-vote-card">
+          <span class="popup-vote-emoji">👎</span>
+          <span class="popup-vote-label">Too quiet...</span>
+        </div>
+      </div>
+      <div class="popup-try-again">Try again if you get 👎 — you can do it! 💪</div>
+    </div>
+    <button class="popup-close-btn" id="closeBtn">✅ Great job! Close</button>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────
+   Vocab: word + color + sentence frames
+   Each frame uses {word} as placeholder
+   Frames are hand-crafted per word so they
+   always make natural English sense.
+───────────────────────────────────────────── */
+const vocab = [
+  {
+    word: "water",
+    color: ["#1a78c2","#0d5a9e","#b8dcf8","#e6f4ff","#0a3d6b"],
+    frames: [
+      w => `I think frogs need <span class="frame-blank">___</span>.`,
+      w => `Frogs live in <span class="frame-blank">___</span> because <span class="frame-blank">___</span>.`
+    ]
+  },
+  {
+    word: "home",
+    color: ["#e07a00","#a55500","#ffe0a0","#fff8e6","#5d3a00"],
+    frames: [
+      w => `I think frogs need a <span class="frame-blank">___</span>.`,
+      w => `Frogs live near a pond because it is their <span class="frame-blank">___</span>.`
+    ]
+  },
+  {
+    word: "skin",
+    color: ["#4caf50","#2e7d32","#c8e6c9","#f1f8e9","#1b5e20"],
+    frames: [
+      w => `I think frogs need wet <span class="frame-blank">___</span>.`,
+      w => `Frogs live near water because their <span class="frame-blank">___</span> needs to stay wet.`
+    ]
+  },
+  {
+    word: "egg",
+    color: ["#9c27b0","#6a1b9a","#e1bee7","#f3e5f5","#4a148c"],
+    frames: [
+      w => `I think frogs need water to protect their <span class="frame-blank">___</span>.`,
+      w => `Frogs live in water because their <span class="frame-blank">___</span> need to stay safe.`
+    ]
+  },
+  {
+    word: "tadpole",
+    color: ["#00897b","#00695c","#b2dfdb","#e0f2f1","#004d40"],
+    frames: [
+      w => `I think a frog starts as a <span class="frame-blank">___</span>.`,
+      w => `Frogs live in water because a <span class="frame-blank">___</span> needs water to grow.`
+    ]
+  },
+  {
+    word: "pond",
+    color: ["#0277bd","#01579b","#b3e5fc","#e1f5fe","#003c6b"],
+    frames: [
+      w => `I think frogs need a <span class="frame-blank">___</span>.`,
+      w => `Frogs live in a <span class="frame-blank">___</span> because it has water.`
+    ]
+  },
+  {
+    word: "plants",
+    color: ["#558b2f","#33691e","#dcedc8","#f1f8e9","#1b5e20"],
+    frames: [
+      w => `I think frogs need <span class="frame-blank">___</span>.`,
+      w => `Frogs live near <span class="frame-blank">___</span> because they can hide there.`
+    ]
+  },
+  {
+    word: "mud",
+    color: ["#795548","#4e342e","#d7ccc8","#efebe9","#3e2723"],
+    frames: [
+      w => `I think frogs need <span class="frame-blank">___</span>.`,
+      w => `Frogs live in <span class="frame-blank">___</span> because it keeps them cool and wet.`
+    ]
+  },
+  {
+    word: "food",
+    color: ["#f57f17","#e65100","#fff9c4","#fffde7","#7a4500"],
+    frames: [
+      w => `I think frogs need <span class="frame-blank">___</span>.`,
+      w => `Frogs live near ponds because they can find <span class="frame-blank">___</span> there.`
+    ]
+  },
+  {
+    word: "shelter",
+    color: ["#455a64","#263238","#cfd8dc","#eceff1","#102027"],
+    frames: [
+      w => `I think frogs need <span class="frame-blank">___</span>.`,
+      w => `Frogs live near plants because plants give them <span class="frame-blank">___</span>.`
+    ]
+  },
+];
+
+/* Box ribbon colour palettes [body, shadow, ribbon, lid, text] */
+const BOX_PALETTES = [
+  ["#e74c3c","#a93226","#f39c12","#c0392b","#fff"],
+  ["#2980b9","#1a5276","#f0a500","#1f618d","#fff"],
+  ["#27ae60","#1e8449","#f1c40f","#1d8348","#fff"],
+  ["#8e44ad","#6c3483","#f39c12","#76448a","#fff"],
+  ["#e67e22","#ca6f1e","#f1c40f","#d35400","#fff"],
+  ["#16a085","#0e6655","#ffd54f","#138d75","#fff"],
+  ["#c0392b","#922b21","#f8c471","#a93226","#fff"],
+  ["#1abc9c","#148f77","#f0e68c","#17a589","#fff"],
+  ["#d35400","#a04000","#fce4ec","#c0392b","#fff"],
+  ["#7d3c98","#6c3483","#ffd700","#6c3483","#fff"],
+];
+
+/* Build one gift-box SVG */
+function makeGiftSVG(palette, label, isPicked) {
+  const [body, shadow, ribbon, lid, txt] = palette;
+  const check = isPicked ? `<text x="78" y="22" font-size="20" text-anchor="middle">✅</text>` : '';
+  return `<svg class="gift-svg" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+    <!-- shadow -->
+    <ellipse cx="50" cy="112" rx="34" ry="5" fill="rgba(0,0,0,0.18)"/>
+    <!-- box body -->
+    <rect x="12" y="52" width="76" height="55" rx="5" fill="${body}"/>
+    <!-- body sheen -->
+    <rect x="12" y="52" width="76" height="14" rx="5" fill="rgba(255,255,255,0.12)"/>
+    <!-- box lid -->
+    <rect x="8" y="42" width="84" height="16" rx="5" fill="${lid}"/>
+    <!-- lid sheen -->
+    <rect x="8" y="42" width="84" height="7" rx="5" fill="rgba(255,255,255,0.18)"/>
+    <!-- vertical ribbon on body -->
+    <rect x="44" y="52" width="12" height="55" fill="${ribbon}" opacity="0.85"/>
+    <!-- horizontal ribbon on body -->
+    <rect x="12" y="70" width="76" height="10" fill="${ribbon}" opacity="0.85"/>
+    <!-- vertical ribbon on lid -->
+    <rect x="44" y="42" width="12" height="16" fill="${ribbon}"/>
+    <!-- bow left loop -->
+    <ellipse cx="35" cy="40" rx="16" ry="9" fill="${ribbon}" transform="rotate(-25 35 40)"/>
+    <!-- bow right loop -->
+    <ellipse cx="65" cy="40" rx="16" ry="9" fill="${ribbon}" transform="rotate(25 65 40)"/>
+    <!-- bow sheen left -->
+    <ellipse cx="31" cy="37" rx="7" ry="4" fill="rgba(255,255,255,0.25)" transform="rotate(-25 31 37)"/>
+    <!-- bow sheen right -->
+    <ellipse cx="69" cy="37" rx="7" ry="4" fill="rgba(255,255,255,0.25)" transform="rotate(25 69 37)"/>
+    <!-- bow centre knot -->
+    <circle cx="50" cy="41" r="7" fill="${ribbon}"/>
+    <circle cx="50" cy="41" r="4" fill="rgba(255,255,255,0.3)"/>
+    <!-- label -->
+    <text x="50" y="101" font-family="Baloo 2, cursive" font-size="17" font-weight="800"
+          fill="${txt}" text-anchor="middle" style="text-shadow:2px 2px 0 rgba(0,0,0,0.35)">${label}</text>
+    ${check}
+  </svg>`;
+}
+
+let order = [];
+let picked = new Set();
+let activeVi = null;
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function buildGrid() {
+  const grid = document.getElementById('boxGrid');
+  grid.innerHTML = '';
+  order.forEach((vi, i) => {
+    const isPicked = picked.has(vi);
+    const palette = BOX_PALETTES[vi % BOX_PALETTES.length];
+    const card = document.createElement('div');
+    card.className = 'box-card' + (isPicked ? ' picked' : '');
+    card.innerHTML = makeGiftSVG(palette, `Box ${i + 1}`, isPicked);
+    if (!isPicked) card.onclick = () => openBox(vi);
+    grid.appendChild(card);
+  });
+}
+
+function openBox(vi) {
+  const v = vocab[vi];
+  document.getElementById('popupWord').textContent = v.word;
+  const framesDiv = document.getElementById('popupFrames');
+  framesDiv.innerHTML = v.frames.map(fn => `
+    <div class="frame-card">
+      <div class="frame-card-text">🗣️ ${fn(v.word)}</div>
+    </div>
+  `).join('');
+  activeVi = vi;
+  document.getElementById('popup').classList.add('active');
+}
+
+function closeBox() {
+  if (activeVi !== null) {
+    picked.add(activeVi);
+    buildGrid();
+    activeVi = null;
+  }
+  document.getElementById('popup').classList.remove('active');
+}
+
+function shuffleBoxes() {
+  picked = new Set();
+  order = shuffle([...Array(vocab.length).keys()]);
+  buildGrid();
+}
+
+document.getElementById('closeBtn').onclick = closeBox;
+document.getElementById('popup').addEventListener('click', e => {
+  if (e.target === document.getElementById('popup')) closeBox();
+});
+
+shuffleBoxes();
+</script>
+</body>
+</html>
